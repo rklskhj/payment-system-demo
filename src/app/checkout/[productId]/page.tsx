@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Product } from "@/types";
 
-export default function CheckoutPage({
-  params,
-}: {
-  params: { productId: string };
-}) {
+type CheckoutPageProps = {
+  params: {
+    productId: string;
+  };
+};
+
+export default function CheckoutPage({ params }: CheckoutPageProps) {
   const { productId } = params;
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);

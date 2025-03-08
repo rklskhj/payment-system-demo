@@ -4,6 +4,10 @@ import stripe from "@/lib/stripe";
 import prisma from "@/lib/prisma";
 import Stripe from "stripe";
 
+// 새로운 방식의 설정
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export async function POST(request: NextRequest) {
   const body = await request.text();
   const signature = (await headers()).get("stripe-signature") as string;
@@ -80,9 +84,3 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ received: true });
 }
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
