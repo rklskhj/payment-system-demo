@@ -6,7 +6,7 @@ import { z } from "zod";
 
 const prisma = new PrismaClient();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: "2023-10-16",
+  apiVersion: "2025-02-24.acacia",
 });
 
 // 입력 유효성 검사 스키마
@@ -78,8 +78,12 @@ export async function POST(request: Request) {
       },
       product_data: {
         name: product.name,
-        description: product.description || undefined,
-        images: product.imageUrl ? [product.imageUrl] : undefined,
+        ...(product.description ? { description: product.description } : {}),
+        ...(product.imageUrl && process.env.NEXTAUTH_URL
+          ? {
+              images: [`${process.env.NEXTAUTH_URL}${product.imageUrl}`],
+            }
+          : {}),
       },
     });
 

@@ -71,8 +71,14 @@ export async function POST(request: Request) {
             currency: "krw",
             product_data: {
               name: product.name,
-              description: product.description || undefined,
-              images: product.imageUrl ? [product.imageUrl] : undefined,
+              ...(product.description
+                ? { description: product.description }
+                : {}),
+              ...(product.imageUrl && process.env.NEXTAUTH_URL
+                ? {
+                    images: [`${process.env.NEXTAUTH_URL}${product.imageUrl}`],
+                  }
+                : {}),
             },
             unit_amount: product.price,
           },
