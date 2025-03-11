@@ -1,0 +1,15 @@
+이 폴더에는 다음 이미지 파일이 필요합니다:
+1. basic-subscription.jpg
+2. premium-subscription.jpg
+3. one-time-package.jpg
+4. annual-subscription.jpg
+5. business-subscription.jpg
+
+실제 이미지 파일을 추가하거나, 다음 명령어로 무료 이미지를 다운로드할 수 있습니다:
+```
+curl -o public/images/basic-subscription.jpg https://source.unsplash.com/random/800x600/?subscription
+curl -o public/images/premium-subscription.jpg https://source.unsplash.com/random/800x600/?premium
+curl -o public/images/one-time-package.jpg https://source.unsplash.com/random/800x600/?package
+curl -o public/images/annual-subscription.jpg https://source.unsplash.com/random/800x600/?annual
+curl -o public/images/business-subscription.jpg https://source.unsplash.com/random/800x600/?business
+``` 

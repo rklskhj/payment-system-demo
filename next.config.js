@@ -6,6 +6,9 @@ const nextConfig = {
       "*": ["**/*.js.map", "**/*.d.ts", ".next/trace"],
     },
   },
+  images: {
+    domains: ["example.com"],
+  },
 };
 
 module.exports = nextConfig;

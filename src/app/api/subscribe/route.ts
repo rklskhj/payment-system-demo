@@ -6,11 +6,11 @@ import { z } from "zod";
 
 const prisma = new PrismaClient();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: "2025-02-24.acacia",
+  apiVersion: "2023-10-16",
 });
 
 // 입력 유효성 검사 스키마
-const checkoutSchema = z.object({
+const subscribeSchema = z.object({
   productId: z.string(),
 });
 
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     // 입력 유효성 검사
-    const validation = checkoutSchema.safeParse(body);
+    const validation = subscribeSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json(
         { message: validation.error.errors[0].message },
@@ -62,47 +62,50 @@ export async function POST(request: Request) {
       );
     }
 
-    // Stripe 결제 세션 생성
+    // 구독 주기 결정 (월간 또는 연간)
+    const isMonthly =
+      product.name.includes("월간") || !product.name.includes("연간");
+    const interval = isMonthly ? "month" : "year";
+    const intervalCount = 1;
+
+    // Stripe 가격 생성 (동적으로 생성)
+    const price = await stripe.prices.create({
+      currency: "krw",
+      unit_amount: product.price,
+      recurring: {
+        interval,
+        interval_count: intervalCount,
+      },
+      product_data: {
+        name: product.name,
+        description: product.description || undefined,
+        images: product.imageUrl ? [product.imageUrl] : undefined,
+      },
+    });
+
+    // Stripe 구독 세션 생성
     const stripeSession = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
         {
-          price_data: {
-            currency: "krw",
-            product_data: {
-              name: product.name,
-              description: product.description || undefined,
-              images: product.imageUrl ? [product.imageUrl] : undefined,
-            },
-            unit_amount: product.price,
-          },
+          price: price.id,
           quantity: 1,
         },
       ],
-      mode: "payment",
-      success_url: `${process.env.NEXTAUTH_URL}/dashboard?payment_success=true`,
-      cancel_url: `${process.env.NEXTAUTH_URL}/products?payment_canceled=true`,
+      mode: "subscription",
+      success_url: `${process.env.NEXTAUTH_URL}/dashboard?subscription_success=true`,
+      cancel_url: `${process.env.NEXTAUTH_URL}/subscriptions?subscription_canceled=true`,
       customer_email: user.email,
       metadata: {
         userId: user.id,
         productId: product.id,
-      },
-    });
-
-    // 주문 생성
-    await prisma.order.create({
-      data: {
-        userId: user.id,
-        productId: product.id,
-        amount: product.price,
-        status: "pending",
-        paymentId: stripeSession.id,
+        planType: isMonthly ? "monthly" : "yearly",
       },
     });
 
     return NextResponse.json({ url: stripeSession.url });
   } catch (error) {
-    console.error("결제 처리 오류:", error);
+    console.error("구독 처리 오류:", error);
     return NextResponse.json(
       { message: "서버 오류가 발생했습니다." },
       { status: 500 }

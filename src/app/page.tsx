@@ -1,124 +1,137 @@
-import Link from "next/link";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+"use client";
 
-export default async function Home() {
-  const session = await getServerSession(authOptions);
+import Link from "next/link";
+import { useSession, signOut } from "next-auth/react";
+
+export default function Home() {
+  const { data: session } = useSession();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* 헤더 섹션 */}
-      <header className="py-16 text-center">
-        <h1 className="text-4xl font-bold text-blue-800 mb-4">
-          결제 시스템 데모
-        </h1>
-        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          안전하고 편리한 결제 시스템을 경험해보세요. 일회성 결제와 구독 모델을
-          지원합니다.
-        </p>
+    <div className="min-h-screen flex flex-col">
+      {/* 헤더 */}
+      <header className="bg-white shadow-sm">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-indigo-600">
+            결제 시스템 데모
+          </h1>
+          <div>
+            {session ? (
+              <div className="flex space-x-4">
+                <Link
+                  href="/dashboard"
+                  className="text-indigo-600 hover:text-indigo-800"
+                >
+                  마이페이지
+                </Link>
+                <button
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="text-gray-600 hover:text-gray-800"
+                >
+                  로그아웃
+                </button>
+              </div>
+            ) : (
+              <div className="flex space-x-4">
+                <Link
+                  href="/login"
+                  className="text-indigo-600 hover:text-indigo-800"
+                >
+                  로그인
+                </Link>
+                <Link
+                  href="/register"
+                  className="text-gray-600 hover:text-gray-800"
+                >
+                  회원가입
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
       </header>
 
-      {/* 메인 섹션 */}
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* 상품 및 구독 섹션 */}
-        <div className="grid md:grid-cols-2 gap-8 mb-16">
-          {/* 일회성 결제 상품 */}
-          <div className="bg-white p-8 rounded-lg shadow-md">
-            <h2 className="text-2xl font-semibold text-blue-700 mb-4">
-              일회성 결제
+      {/* 메인 콘텐츠 */}
+      <main className="flex-grow">
+        {/* 히어로 섹션 */}
+        <section className="bg-indigo-700 text-white py-20">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-4xl font-bold mb-4">
+              Next.js와 Stripe로 구현한 결제 시스템
             </h2>
-            <p className="text-gray-600 mb-6">
-              원하는 상품을 선택하고 간편하게 결제하세요.
+            <p className="text-xl mb-8">
+              일회성 결제와 구독 서비스를 지원하는 완벽한 결제 시스템 데모
             </p>
-            <Link
-              href="/products"
-              className="block text-center bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 transition"
-            >
-              상품 보기
-            </Link>
+            <div className="flex justify-center space-x-4">
+              <Link
+                href="/products"
+                className="bg-white text-indigo-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-100"
+              >
+                상품 둘러보기
+              </Link>
+              <Link
+                href="/subscriptions"
+                className="bg-transparent border-2 border-white text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-600"
+              >
+                구독 서비스 보기
+              </Link>
+            </div>
           </div>
-
-          {/* 구독 상품 */}
-          <div className="bg-white p-8 rounded-lg shadow-md">
-            <h2 className="text-2xl font-semibold text-blue-700 mb-4">
-              구독 서비스
-            </h2>
-            <p className="text-gray-600 mb-6">
-              월간 또는 연간 구독으로 더 많은 혜택을 누리세요.
-            </p>
-            <Link
-              href="/subscriptions"
-              className="block text-center bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 transition"
-            >
-              구독 플랜 보기
-            </Link>
-          </div>
-        </div>
-
-        {/* 사용자 대시보드 링크 */}
-        {session?.user ? (
-          <div className="text-center mb-16">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-              내 계정 관리
-            </h2>
-            <Link
-              href="/dashboard"
-              className="inline-block bg-gray-800 text-white py-3 px-8 rounded-md hover:bg-gray-900 transition"
-            >
-              대시보드로 이동
-            </Link>
-          </div>
-        ) : (
-          <div className="text-center mb-16">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-              계정 로그인
-            </h2>
-            <Link
-              href="/auth/login"
-              className="inline-block bg-gray-800 text-white py-3 px-8 rounded-md hover:bg-gray-900 transition"
-            >
-              로그인하기
-            </Link>
-          </div>
-        )}
+        </section>
 
         {/* 기능 소개 섹션 */}
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="p-6 bg-blue-50 rounded-lg">
-            <h3 className="text-xl font-semibold text-blue-800 mb-3">
-              안전한 결제
-            </h3>
-            <p className="text-gray-700">
-              Stripe를 통한 안전한 결제 처리로 개인 정보를 보호합니다.
-            </p>
+        <section className="py-16 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl font-bold text-center mb-12">주요 기능</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <h3 className="text-xl font-semibold mb-4">일회성 결제</h3>
+                <p className="text-gray-600 mb-4">
+                  Stripe를 통한 안전한 일회성 결제 처리. 신용카드, 체크카드 등
+                  다양한 결제 수단 지원.
+                </p>
+                <Link
+                  href="/products"
+                  className="text-indigo-600 hover:text-indigo-800"
+                >
+                  상품 보기 →
+                </Link>
+              </div>
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <h3 className="text-xl font-semibold mb-4">구독 서비스</h3>
+                <p className="text-gray-600 mb-4">
+                  월간, 연간 구독 서비스 지원. 자동 결제 및 구독 관리 기능 제공.
+                </p>
+                <Link
+                  href="/subscriptions"
+                  className="text-indigo-600 hover:text-indigo-800"
+                >
+                  구독 서비스 보기 →
+                </Link>
+              </div>
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <h3 className="text-xl font-semibold mb-4">사용자 대시보드</h3>
+                <p className="text-gray-600 mb-4">
+                  결제 내역 및 구독 정보 확인. 구독 취소 및 관리 기능 제공.
+                </p>
+                <Link
+                  href="/dashboard"
+                  className="text-indigo-600 hover:text-indigo-800"
+                >
+                  대시보드 보기 →
+                </Link>
+              </div>
+            </div>
           </div>
-          <div className="p-6 bg-blue-50 rounded-lg">
-            <h3 className="text-xl font-semibold text-blue-800 mb-3">
-              구독 관리
-            </h3>
-            <p className="text-gray-700">
-              언제든지 구독을 시작, 변경, 취소할 수 있는 유연한 관리 시스템을
-              제공합니다.
-            </p>
-          </div>
-          <div className="p-6 bg-blue-50 rounded-lg">
-            <h3 className="text-xl font-semibold text-blue-800 mb-3">
-              영수증 발급
-            </h3>
-            <p className="text-gray-700">
-              모든 결제에 대한 영수증을 즉시 발급받고 이메일로 전송받을 수
-              있습니다.
-            </p>
-          </div>
-        </div>
+        </section>
       </main>
 
       {/* 푸터 */}
-      <footer className="bg-gray-800 text-white py-8 mt-16">
-        <div className="max-w-6xl mx-auto px-4 text-center">
-          <p>© 2023 결제 시스템 데모. 모든 권리 보유.</p>
+      <footer className="bg-gray-800 text-white py-8">
+        <div className="container mx-auto px-4 text-center">
+          <p>© 2023 결제 시스템 데모. All rights reserved.</p>
           <p className="mt-2 text-gray-400">
-            이 프로젝트는 학습 및 포트폴리오 목적으로 제작되었습니다.
+            Next.js, Prisma, PostgreSQL, Stripe를 활용한 결제 시스템 데모
+            프로젝트
           </p>
         </div>
       </footer>
