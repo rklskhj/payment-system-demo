@@ -1,54 +1,11 @@
-"use client";
-
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 export default function Home() {
-  const { data: session } = useSession();
-
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* 헤더 */}
-      <header className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-indigo-600">
-            결제 시스템 데모
-          </h1>
-          <div>
-            {session ? (
-              <div className="flex space-x-4">
-                <Link
-                  href="/dashboard"
-                  className="text-indigo-600 hover:text-indigo-800"
-                >
-                  마이페이지
-                </Link>
-                <button
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                  className="text-gray-600 hover:text-gray-800"
-                >
-                  로그아웃
-                </button>
-              </div>
-            ) : (
-              <div className="flex space-x-4">
-                <Link
-                  href="/login"
-                  className="text-indigo-600 hover:text-indigo-800"
-                >
-                  로그인
-                </Link>
-                <Link
-                  href="/register"
-                  className="text-gray-600 hover:text-gray-800"
-                >
-                  회원가입
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen flex flex-col bg-white">
+      <Header />
 
       {/* 메인 콘텐츠 */}
       <main className="flex-grow">
@@ -126,15 +83,7 @@ export default function Home() {
       </main>
 
       {/* 푸터 */}
-      <footer className="bg-gray-800 text-white py-8">
-        <div className="container mx-auto px-4 text-center">
-          <p>© 2023 결제 시스템 데모. All rights reserved.</p>
-          <p className="mt-2 text-gray-400">
-            Next.js, Prisma, PostgreSQL, Stripe를 활용한 결제 시스템 데모
-            프로젝트
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

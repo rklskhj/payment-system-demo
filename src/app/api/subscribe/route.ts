@@ -16,7 +16,7 @@ const subscribeSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(); //현재 로그인한 사용자의 세션 가져오기
 
     if (!session || !session.user) {
       return NextResponse.json(

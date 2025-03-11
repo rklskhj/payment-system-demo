@@ -1,3 +1,5 @@
+"use client";
+
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useState } from "react";
 
@@ -30,16 +32,19 @@ export function useAuth() {
     }
   };
 
-  const logout = async () => {
-    await signOut({ redirect: false });
+  const handleSignOut = async (options = { callbackUrl: "/" }) => {
+    await signOut(options);
   };
 
   return {
-    user: session?.user, // 세션이 있으면 user 객체, 없으면 undefined
-    isAuthenticated: !!session?.user, // 세션이 있으면 true, 없으면 false
-    isLoading: status === "loading" || loading, // 로딩 상태
-    error, // 오류 메시지
-    login, // 로그인 함수
-    logout, // 로그아웃 함수
+    session,
+    user: session?.user,
+    status,
+    isAuthenticated: status === "authenticated",
+    isLoading: status === "loading" || loading,
+    error,
+    login,
+    signOut: handleSignOut,
+    logout: handleSignOut, // 두 가지 이름으로 제공하여 호환성 유지
   };
 }
