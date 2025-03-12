@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -17,6 +17,7 @@ interface Product {
   description: string | null;
   price: number;
   imageUrl: string | null;
+  productType: string;
 }
 
 interface Order {
@@ -44,7 +45,8 @@ interface User {
   subscriptions: Subscription[];
 }
 
-export default function DashboardPage() {
+// 검색 파라미터를 사용하는 컴포넌트
+function DashboardContent() {
   const { data: session, status } = useSession();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -143,7 +145,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
+      <div className="text-center py-10">
         <p>로딩 중...</p>
       </div>
     );
@@ -151,14 +153,14 @@ export default function DashboardPage() {
 
   if (!user) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
+      <div className="text-center py-10">
         <p>사용자 정보를 불러올 수 없습니다.</p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <>
       <h1 className="text-3xl font-bold mb-8 text-center">마이 페이지</h1>
 
       <div className="bg-white shadow-md rounded-lg p-6 mb-8">
@@ -264,6 +266,25 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+    </>
+  );
+}
+
+// 로딩 상태를 표시할 폴백 컴포넌트
+function DashboardLoading() {
+  return (
+    <div className="container mx-auto px-4 py-8 text-center">
+      <p>페이지 로딩 중...</p>
+    </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <Suspense fallback={<DashboardLoading />}>
+        <DashboardContent />
+      </Suspense>
     </div>
   );
 }

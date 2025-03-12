@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+// 동적 라우트임을 명시
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
@@ -11,15 +14,11 @@ export async function GET(request: NextRequest) {
     // 타입별 필터링
     if (type === "one-time") {
       whereClause = {
-        name: {
-          contains: "일회성",
-        },
+        productType: "one-time",
       };
     } else if (type === "subscription") {
       whereClause = {
-        name: {
-          contains: "구독",
-        },
+        productType: "subscription",
       };
     }
 

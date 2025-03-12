@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import Header from "@/components/Header";
@@ -17,9 +17,11 @@ interface Product {
   imageUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
+  productType: string;
 }
 
-export default function SubscriptionsPage() {
+// 검색 파라미터를 사용하는 컴포넌트
+function SubscriptionContent() {
   const [subscriptions, setSubscriptions] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
@@ -60,41 +62,60 @@ export default function SubscriptionsPage() {
   }, [subscriptionCanceled, clearTempOrder]);
 
   return (
+    <>
+      <h1 className="text-3xl font-bold mb-8 text-center">구독 서비스</h1>
+
+      <div className="flex justify-between items-center mb-6">
+        <Link
+          href="/dashboard"
+          className="text-indigo-600 hover:text-indigo-800"
+        >
+          ← 대시보드로 돌아가기
+        </Link>
+        <Link
+          href="/products"
+          className="text-indigo-600 hover:text-indigo-800"
+        >
+          일회성 결제 상품 보기 →
+        </Link>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-10">
+          <p className="text-gray-500">로딩 중...</p>
+        </div>
+      ) : subscriptions.length === 0 ? (
+        <div className="text-center py-10">
+          <p className="text-gray-500">구독 서비스가 없습니다.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {subscriptions.map((subscription) => (
+            <SubscriptionCard key={subscription.id} product={subscription} />
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+// 로딩 상태를 표시할 폴백 컴포넌트
+function SubscriptionsLoading() {
+  return (
+    <div className="text-center py-10">
+      <p className="text-gray-500">페이지 로딩 중...</p>
+    </div>
+  );
+}
+
+export default function SubscriptionsPage() {
+  return (
     <div className="min-h-screen flex flex-col bg-white">
       <Header />
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8 text-center">구독 서비스</h1>
-
-        <div className="flex justify-between items-center mb-6">
-          <Link
-            href="/dashboard"
-            className="text-indigo-600 hover:text-indigo-800"
-          >
-            ← 대시보드로 돌아가기
-          </Link>
-          <Link
-            href="/products"
-            className="text-indigo-600 hover:text-indigo-800"
-          >
-            일회성 결제 상품 보기 →
-          </Link>
-        </div>
-
-        {loading ? (
-          <div className="text-center py-10">
-            <p className="text-gray-500">로딩 중...</p>
-          </div>
-        ) : subscriptions.length === 0 ? (
-          <div className="text-center py-10">
-            <p className="text-gray-500">구독 서비스가 없습니다.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {subscriptions.map((subscription) => (
-              <SubscriptionCard key={subscription.id} product={subscription} />
-            ))}
-          </div>
-        )}
+        <Suspense fallback={<SubscriptionsLoading />}>
+          <SubscriptionContent />
+        </Suspense>
       </div>
       <Footer />
     </div>

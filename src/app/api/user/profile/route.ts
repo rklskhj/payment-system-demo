@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
 
+// 동적 라우트임을 명시
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const session = await getServerSession();

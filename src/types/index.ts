@@ -5,6 +5,7 @@ export interface Product {
   description?: string;
   price: number;
   imageUrl?: string;
+  productType?: string;
 }
 
 // 주문 관련 타입
