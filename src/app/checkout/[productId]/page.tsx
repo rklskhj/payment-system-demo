@@ -63,7 +63,10 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
       });
 
       if (!response.ok) {
-        throw new Error("결제 처리 중 오류가 발생했습니다.");
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || "결제 처리 중 오류가 발생했습니다."
+        );
       }
 
       const { url } = await response.json();

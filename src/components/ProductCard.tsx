@@ -5,6 +5,8 @@ import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useOrderStore } from "@/store/useOrderStore";
+import { useCreatePaymentSession } from "@/hooks/queries/useOrderQueries";
 
 interface ProductCardProps {
   product: Product;
@@ -14,6 +16,8 @@ export default function ProductCard({ product }: ProductCardProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { data: session } = useSession();
+  const { setTempOrder } = useOrderStore();
+  const createPaymentSession = useCreatePaymentSession();
 
   const handlePurchase = async () => {
     if (!session) {
@@ -23,22 +27,25 @@ export default function ProductCard({ product }: ProductCardProps) {
 
     setLoading(true);
     try {
-      const response = await fetch("/api/checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          productId: product.id,
-        }),
+      // 임시 주문 정보 저장
+      setTempOrder({
+        productId: product.id,
+        productName: product.name,
+        productType: "one-time",
+        amount: product.price,
+        imageUrl: product.imageUrl || undefined,
       });
 
-      const data = await response.json();
+      // 결제 세션 생성
+      const result = await createPaymentSession.mutateAsync({
+        productId: product.id,
+        orderType: "one-time",
+      });
 
-      if (response.ok && data.url) {
-        window.location.href = data.url;
+      if (result.url) {
+        window.location.href = result.url;
       } else {
-        throw new Error(data.message || "결제 처리 중 오류가 발생했습니다.");
+        throw new Error("결제 URL을 받지 못했습니다.");
       }
     } catch (error) {
       console.error("결제 오류:", error);
@@ -77,10 +84,12 @@ export default function ProductCard({ product }: ProductCardProps) {
           </span>
           <button
             onClick={handlePurchase}
-            disabled={loading}
+            disabled={loading || createPaymentSession.isPending}
             className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:bg-indigo-300"
           >
-            {loading ? "처리 중..." : "구매하기"}
+            {loading || createPaymentSession.isPending
+              ? "처리 중..."
+              : "구매하기"}
           </button>
         </div>
       </div>

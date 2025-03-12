@@ -10,7 +10,10 @@ async function hashPassword(password: string): Promise<string> {
 
 async function main() {
   // 기존 데이터 삭제 (선택 사항)
-  await prisma.user.deleteMany({});
+  // 참조하는 테이블부터 먼저 삭제
+  await prisma.order.deleteMany();
+  // 그 다음 User 테이블 삭제
+  await prisma.user.deleteMany();
   await prisma.product.deleteMany({});
 
   console.log("Seeding database...");
@@ -46,7 +49,7 @@ async function main() {
       name: "기본 구독",
       description: "월간 기본 구독 서비스",
       price: 9900,
-      imageUrl: "/images/basic-subscription.jpg",
+      imageUrl: "/images/basic-subscription.png",
     },
   });
 
@@ -55,7 +58,7 @@ async function main() {
       name: "프리미엄 구독",
       description: "월간 프리미엄 구독 서비스, 모든 기능 포함",
       price: 19900,
-      imageUrl: "/images/premium-subscription.jpg",
+      imageUrl: "/images/premium-subscription.png",
     },
   });
 
@@ -64,7 +67,7 @@ async function main() {
       name: "일회성 결제 상품",
       description: "특별 콘텐츠 패키지",
       price: 29900,
-      imageUrl: "/images/one-time-package.jpg",
+      imageUrl: "/images/one-time-package.png",
     },
   });
 

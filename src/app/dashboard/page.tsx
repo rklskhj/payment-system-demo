@@ -1,33 +1,160 @@
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { PrismaClient } from "@prisma/client";
+import { useSession } from "next-auth/react";
+import { toast } from "react-toastify";
+import { useOrderStore } from "@/store/useOrderStore";
+import {
+  useGetOrders,
+  useUpdateLatestOrder,
+} from "@/hooks/queries/useOrderQueries";
 
-const prisma = new PrismaClient();
+interface Product {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  imageUrl: string | null;
+}
 
-export default async function DashboardPage() {
-  const session = await getServerSession();
+interface Order {
+  id: string;
+  amount: number;
+  status: string;
+  createdAt: Date;
+  product: Product;
+}
 
-  if (!session || !session.user) {
-    redirect("/login");
-  }
+interface Subscription {
+  id: string;
+  planType: string;
+  status: string;
+  currentPeriodEnd: Date;
+  createdAt: Date;
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: Date;
+  orders: Order[];
+  subscriptions: Subscription[];
+}
+
+export default function DashboardPage() {
+  const { data: session, status } = useSession();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const paymentSuccess = searchParams.get("payment_success");
+  const subscriptionSuccess = searchParams.get("subscription_success");
+  const { clearTempOrder } = useOrderStore();
+  const updateLatestOrder = useUpdateLatestOrder();
+  const { refetch: refetchOrders } = useGetOrders();
 
   // 사용자 정보 가져오기
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email as string },
-    include: {
-      orders: {
-        include: { product: true },
-        orderBy: { createdAt: "desc" },
-      },
-      subscriptions: {
-        orderBy: { createdAt: "desc" },
-      },
-    },
-  });
+  const fetchUserData = useCallback(async () => {
+    try {
+      const response = await fetch("/api/user/profile");
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data);
+      } else {
+        throw new Error("사용자 정보를 가져오는데 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("사용자 정보 가져오기 오류:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (status === "loading") return;
+
+    if (!session) {
+      router.push("/login");
+      return;
+    }
+
+    // 초기 데이터 로드
+    fetchUserData();
+
+    // 결제 성공 또는 구독 성공 시 주문 상태 업데이트
+    const updateOrderIfNeeded = async () => {
+      if (paymentSuccess === "true" || subscriptionSuccess === "true") {
+        try {
+          // 임시 주문 정보 삭제
+          clearTempOrder();
+
+          // 주문 상태 업데이트
+          await updateLatestOrder.mutateAsync();
+
+          // 주문 목록 갱신
+          await refetchOrders();
+
+          // 사용자 정보 다시 가져오기
+          await fetchUserData();
+
+          // 적절한 성공 메시지 표시
+          if (paymentSuccess === "true") {
+            toast.success("결제가 성공적으로 완료되었습니다.", {
+              toastId: "payment-success",
+              position: "top-center",
+              autoClose: 2000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: false,
+              draggable: true,
+            });
+          } else {
+            toast.success("구독이 성공적으로 시작되었습니다.", {
+              toastId: "subscription-success",
+              position: "top-center",
+              autoClose: 2000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: false,
+              draggable: true,
+            });
+          }
+        } catch (error) {
+          console.error("주문 상태 업데이트 오류:", error);
+        }
+      }
+    };
+
+    updateOrderIfNeeded();
+  }, [
+    session,
+    status,
+    router,
+    paymentSuccess,
+    subscriptionSuccess,
+    fetchUserData,
+    clearTempOrder,
+    updateLatestOrder,
+    refetchOrders,
+  ]);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <p>로딩 중...</p>
+      </div>
+    );
+  }
 
   if (!user) {
-    redirect("/login");
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <p>사용자 정보를 불러올 수 없습니다.</p>
+      </div>
+    );
   }
 
   return (
@@ -76,10 +203,17 @@ export default async function DashboardPage() {
                   </p>
                   <p className="text-gray-600">
                     상태:{" "}
-                    {order.status === "completed"
+                    {order.status === "completed" ||
+                    order.status === "completed_subscription"
                       ? "결제 완료"
-                      : order.status === "pending"
-                      ? "처리 중"
+                      : order.status === "pending_payment"
+                      ? "결제 처리 중"
+                      : order.status === "pending_subscription"
+                      ? "구독 처리 중"
+                      : order.status === "expired"
+                      ? "만료됨"
+                      : order.status === "canceled"
+                      ? "취소됨"
                       : "실패"}
                   </p>
                   <p className="text-gray-600 text-sm">

@@ -36,19 +36,74 @@ export async function POST(request: NextRequest) {
     // 메타 데이터에서 주문 정보 가져오기
     const userId = session.metadata?.userId;
     const productId = session.metadata?.productId;
+    const amount = session.metadata?.amount
+      ? parseFloat(session.metadata.amount)
+      : 0;
+    const orderType = session.metadata?.orderType as
+      | "one-time"
+      | "subscription";
 
-    if (userId && productId) {
-      // 주문 상태 업데이트
-      await prisma.order.updateMany({
-        where: {
-          paymentId: session.id,
-          userId,
-          productId,
-        },
-        data: {
-          status: "completed",
-        },
+    if (userId && productId && amount > 0) {
+      // 결제 성공 시 주문 생성
+      const status =
+        orderType === "one-time" ? "completed" : "completed_subscription";
+
+      const orderData = {
+        userId,
+        productId,
+        amount,
+        status,
+        paymentId: session.id,
+        orderType,
+      };
+
+      await prisma.order.create({
+        data: orderData,
       });
+
+      console.log(`주문 생성 완료: ${session.id}, 타입: ${orderType}`);
+
+      // 구독인 경우 구독 정보도 생성/업데이트
+      if (orderType === "subscription") {
+        const planType = session.metadata?.planType || "monthly";
+
+        // 구독 정보 조회를 위해 Stripe API 호출
+        try {
+          const subscriptions = await stripe.subscriptions.list({
+            customer: session.customer as string,
+            limit: 1,
+          });
+
+          if (subscriptions.data.length > 0) {
+            const subscription = subscriptions.data[0];
+
+            await prisma.subscription.upsert({
+              where: {
+                stripeId: subscription.id,
+              },
+              update: {
+                status: subscription.status,
+                currentPeriodEnd: new Date(
+                  subscription.current_period_end * 1000
+                ),
+              },
+              create: {
+                stripeId: subscription.id,
+                userId,
+                status: subscription.status,
+                planType,
+                currentPeriodEnd: new Date(
+                  subscription.current_period_end * 1000
+                ),
+              },
+            });
+
+            console.log(`구독 정보 생성/업데이트 완료: ${subscription.id}`);
+          }
+        } catch (error) {
+          console.error("구독 정보 조회 실패:", error);
+        }
+      }
     }
   }
 
@@ -80,6 +135,27 @@ export async function POST(request: NextRequest) {
         },
       });
     }
+  }
+
+  // 결제 실패 이벤트 처리 - 주문이 생성되지 않으므로 별도 처리 필요 없음
+  if (
+    event.type === "checkout.session.async_payment_failed" ||
+    event.type === "payment_intent.payment_failed"
+  ) {
+    console.log(`결제 실패: ${event.id}`);
+  }
+
+  // 결제 취소 이벤트 처리 - 주문이 생성되지 않으므로 별도 처리 필요 없음
+  if (
+    event.type.startsWith("checkout.session") &&
+    (event.type.includes("canceled") || event.type.includes("cancelled"))
+  ) {
+    console.log(`결제 취소: ${event.id}`);
+  }
+
+  // 결제 세션 만료 이벤트 처리 - 주문이 생성되지 않으므로 별도 처리 필요 없음
+  if (event.type === "checkout.session.expired") {
+    console.log(`결제 세션 만료: ${event.id}`);
   }
 
   return NextResponse.json({ received: true });

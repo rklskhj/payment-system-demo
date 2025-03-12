@@ -13,10 +13,11 @@ export interface Order {
   userId: string;
   productId: string;
   amount: number;
-  status: "pending" | "completed" | "failed";
+  status: "pending" | "completed" | "failed" | "expired";
   paymentId: string;
   createdAt: Date;
   updatedAt: Date;
+  expiresAt?: Date;
 }
 
 // 구독 관련 타입
