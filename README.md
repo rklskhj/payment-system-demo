@@ -1,55 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
 # 결제 시스템 데모
 
-이 프로젝트는 Next.js와 Stripe를 사용한 결제 시스템 데모입니다.
+Next.js와 Stripe를 활용한 결제 시스템 데모 프로젝트입니다.
 
-## Getting Started
+## 주요 기능
 
-First, run the development server:
+- 일회성 결제 처리
+- 구독 결제 처리
+- Webhook 이벤트 기반 결제 상태 관리
+- 중복 결제 방지
+- 결제 완료 시에만 데이터 생성하는 효율적인 설계
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 기술 스택
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- Next.js 14
+- TypeScript
+- Prisma ORM
+- PostgreSQL
+- Stripe API
+- NextAuth.js
+- TailwindCSS
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 시작하기
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## 환경 설정
+### 환경 설정
 
 1. `.env` 파일을 생성하고 다음 환경 변수를 설정합니다:
 
 ```
-DATABASE_URL="your-database-url"
-NEXTAUTH_SECRET="your-nextauth-secret"
+DATABASE_URL="데이터베이스-URL"
+NEXTAUTH_SECRET="인증-시크릿-키"
 NEXTAUTH_URL="http://localhost:3000"
-STRIPE_SECRET_KEY="your-stripe-secret-key"
-STRIPE_WEBHOOK_SECRET="your-stripe-webhook-secret"
-CRON_API_KEY="your-cron-api-key"
+STRIPE_SECRET_KEY="스트라이프-시크릿-키"
+STRIPE_WEBHOOK_SECRET="스트라이프-웹훅-시크릿"
 ```
 
 2. 의존성 설치:
@@ -70,42 +52,29 @@ npx prisma migrate dev
 npm run dev
 ```
 
-## 주문 만료 처리 설정
+5. 브라우저에서 [http://localhost:3000](http://localhost:3000)으로 접속
 
-주문 만료 처리를 위해 cron job을 설정해야 합니다. 다음과 같은 방법으로 설정할 수 있습니다:
+## Stripe Webhook 설정
 
-### 클라우드 서비스 사용 (권장)
+로컬 개발 환경에서 Stripe webhook을 테스트하려면:
 
-- [Vercel Cron Jobs](https://vercel.com/docs/cron-jobs)
-- [GitHub Actions](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule)
-- [AWS Lambda with EventBridge](https://aws.amazon.com/eventbridge/)
+1. [Stripe CLI](https://stripe.com/docs/stripe-cli)를 설치합니다
+2. 다음 명령어로 webhook을 로컬 환경으로 포워딩합니다:
 
-### 수동 설정 예시 (Linux/Unix)
-
-crontab에 다음 항목을 추가합니다:
-
-```
-*/10 * * * * curl -X POST https://your-domain.com/api/orders/cleanup -H "Authorization: Bearer your-cron-api-key"
+```bash
+stripe listen --forward-to http://localhost:3000/api/webhooks/stripe
 ```
 
-이 설정은 10분마다 만료된 주문을 처리합니다.
+3. Stripe CLI에서 제공하는 webhook 시크릿을 `.env.local` 파일의 `STRIPE_WEBHOOK_SECRET`에 설정합니다
 
-## 주요 기능
+## 배포
 
-- 일회성 결제 처리
-- 구독 결제 처리
-- 결제 상태 관리 (pending, completed, failed, expired)
-- 중복 결제 방지
-- 주문 만료 자동 처리
+Vercel을 통해 쉽게 배포할 수 있습니다:
 
-## 기술 스택
-
-- Next.js
-- TypeScript
-- Prisma
-- PostgreSQL
-- Stripe API
-- NextAuth.js
+1. GitHub 저장소에 프로젝트 업로드
+2. Vercel 계정과 연결
+3. 환경 변수 설정
+4. 자동 배포 설정
 
 ## 개발자 가이드
 
