@@ -1,6 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { fetchApi, postApi } from "@/lib/api";
-import { queryClient } from "@/lib/query-client";
 
 // 타입 정의
 export interface Order {
@@ -10,7 +9,7 @@ export interface Order {
   amount: number;
   orderType: "one-time" | "subscription";
   status: string;
-  paymentId?: string;
+  paymentId: string;
   createdAt: string;
   updatedAt: string;
   expiresAt?: string;
@@ -36,6 +35,13 @@ export function useCreatePaymentSession() {
   });
 }
 
+// 주문 생성 API 호출
+export function useCreateOrder() {
+  return useMutation({
+    mutationFn: (order: Order) => postApi<Order>("/api/orders", order),
+  });
+}
+
 // 주문 목록 조회 API 호출
 export function useGetOrders() {
   return useQuery({
@@ -44,13 +50,12 @@ export function useGetOrders() {
   });
 }
 
-// 최근 주문 상태 업데이트 API 호출
-export function useUpdateLatestOrder() {
+// 주문 취소 API 호출
+export function useCancelOrder() {
   return useMutation({
-    mutationFn: () => fetchApi<Order>("/api/orders/update-latest"),
-    onSuccess: () => {
-      // 주문 목록 갱신
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-    },
+    mutationFn: (order: Order) =>
+      postApi<Order>(`/api/orders/cancel?paymentId=${order.paymentId}`, {
+        paymentId: order.paymentId,
+      }),
   });
 }

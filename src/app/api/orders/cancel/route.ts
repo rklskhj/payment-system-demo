@@ -42,7 +42,11 @@ export async function POST(request: NextRequest) {
       where: {
         paymentId,
         userId: user.id,
-        status: "pending",
+        OR: [
+          { status: "pending" },
+          { status: "pending_subscription" },
+          { status: "completed_subscription" },
+        ],
       },
     });
 
@@ -59,12 +63,57 @@ export async function POST(request: NextRequest) {
       data: { status: "canceled" },
     });
 
-    // Stripe 세션 취소 시도 (선택적)
-    try {
-      await stripe.checkout.sessions.expire(paymentId);
-    } catch (stripeError) {
-      console.error("Stripe 세션 취소 오류:", stripeError);
-      // Stripe 오류는 무시하고 계속 진행
+    // 구독인 경우 Stripe 구독 취소 처리
+    if (
+      order.orderType === "subscription" &&
+      order.status === "completed_subscription"
+    ) {
+      try {
+        // 해당 주문과 연결된 구독 정보 조회
+        const subscriptions = await stripe.subscriptions.list({
+          limit: 10,
+        });
+
+        // 취소할 구독 찾기 (메타데이터에 userId, productId가 일치하는 구독)
+        let subscriptionToCancel = null;
+        for (const sub of subscriptions.data) {
+          if (
+            sub.metadata.userId === user.id &&
+            sub.metadata.productId === order.productId
+          ) {
+            subscriptionToCancel = sub;
+            break;
+          }
+        }
+
+        if (subscriptionToCancel) {
+          // Stripe 구독 취소
+          await stripe.subscriptions.cancel(subscriptionToCancel.id);
+          console.log(`Stripe 구독 취소 완료: ${subscriptionToCancel.id}`);
+
+          // 구독 정보 업데이트
+          await prisma.subscription.updateMany({
+            where: {
+              userId: user.id,
+              stripeId: subscriptionToCancel.id,
+            },
+            data: { status: "canceled" },
+          });
+        } else {
+          console.log("취소할 Stripe 구독을 찾을 수 없습니다");
+        }
+      } catch (stripeError) {
+        console.error("Stripe 구독 취소 오류:", stripeError);
+        // Stripe 오류는 무시하고 계속 진행
+      }
+    } else {
+      // 일반 주문인 경우 Stripe 세션 취소 시도
+      try {
+        await stripe.checkout.sessions.expire(paymentId);
+      } catch (stripeError) {
+        console.error("Stripe 세션 취소 오류:", stripeError);
+        // Stripe 오류는 무시하고 계속 진행
+      }
     }
 
     return NextResponse.json({ message: "주문이 취소되었습니다." });

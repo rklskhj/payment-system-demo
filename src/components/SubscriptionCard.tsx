@@ -2,7 +2,7 @@
 
 import { Product } from "@prisma/client";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useCallback, useMemo, memo } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useOrderStore } from "@/store/useOrderStore";
@@ -12,14 +12,24 @@ interface SubscriptionCardProps {
   product: Product;
 }
 
-export default function SubscriptionCard({ product }: SubscriptionCardProps) {
+function SubscriptionCard({ product }: SubscriptionCardProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { data: session } = useSession();
-  const { setTempOrder } = useOrderStore();
+  const { setTempOrder, clearTempOrder } = useOrderStore();
   const createPaymentSession = useCreatePaymentSession();
 
-  const handleSubscribe = async () => {
+  // 월간 또는 연간 구독 여부 계산 - useMemo로 최적화
+  const { period } = useMemo(() => {
+    const isMonthly =
+      product.name.includes("월간") || !product.name.includes("연간");
+    return {
+      period: isMonthly ? "월" : "년",
+    };
+  }, [product.name]);
+
+  // useCallback을 사용하여 함수 메모이제이션
+  const handleSubscribe = useCallback(async () => {
     if (!session) {
       router.push("/login");
       return;
@@ -55,33 +65,44 @@ export default function SubscriptionCard({ product }: SubscriptionCardProps) {
       } else {
         alert("구독 처리 중 오류가 발생했습니다.");
       }
+      // 오류 발생 시 임시 주문 정보 삭제
+      clearTempOrder();
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    session,
+    router,
+    product,
+    setTempOrder,
+    clearTempOrder,
+    createPaymentSession,
+  ]);
 
-  // 월간 또는 연간 구독 여부 확인
-  const isMonthly =
-    product.name.includes("월간") || !product.name.includes("연간");
-  const period = isMonthly ? "월" : "년";
+  // 로딩 상태 계산
+  const isProcessing = loading || createPaymentSession.isPending;
+
+  // 이미지 렌더링 조건부 처리를 변수로 추출
+  const imageContent = product.imageUrl ? (
+    <div className="relative h-48 w-full">
+      <Image
+        src={product.imageUrl}
+        alt={product.name}
+        fill
+        className="object-cover"
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        priority={false} // 화면 밖 이미지는 지연 로드
+      />
+    </div>
+  ) : (
+    <div className="bg-gray-200 h-48 flex items-center justify-center">
+      <span className="text-gray-500">이미지 없음</span>
+    </div>
+  );
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden border-2 border-indigo-100">
-      {product.imageUrl ? (
-        <div className="relative h-48 w-full">
-          <Image
-            src={product.imageUrl}
-            alt={product.name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
-        </div>
-      ) : (
-        <div className="bg-gray-200 h-48 flex items-center justify-center">
-          <span className="text-gray-500">이미지 없음</span>
-        </div>
-      )}
+      {imageContent}
 
       <div className="p-4">
         <h3 className="text-xl font-semibold mb-2">{product.name}</h3>
@@ -97,15 +118,16 @@ export default function SubscriptionCard({ product }: SubscriptionCardProps) {
           </div>
           <button
             onClick={handleSubscribe}
-            disabled={loading || createPaymentSession.isPending}
+            disabled={isProcessing}
             className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:bg-indigo-300"
           >
-            {loading || createPaymentSession.isPending
-              ? "처리 중..."
-              : "구독하기"}
+            {isProcessing ? "처리 중..." : "구독하기"}
           </button>
         </div>
       </div>
     </div>
   );
 }
+
+// React.memo로 감싸서 props가 변경되지 않으면 리렌더링 방지
+export default memo(SubscriptionCard);

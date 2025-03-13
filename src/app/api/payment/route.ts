@@ -113,7 +113,7 @@ export async function POST(request: Request) {
             },
           ],
           mode: "subscription",
-          success_url: `${process.env.NEXTAUTH_URL}/dashboard?subscription_success=true`,
+          success_url: `${process.env.NEXTAUTH_URL}/dashboard?subscription_success=true&session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${process.env.NEXTAUTH_URL}/subscriptions?subscription_canceled=true`,
           customer_email: user.email,
           metadata: {
@@ -153,7 +153,7 @@ export async function POST(request: Request) {
             },
           ],
           mode: "payment",
-          success_url: `${process.env.NEXTAUTH_URL}/dashboard?payment_success=true`,
+          success_url: `${process.env.NEXTAUTH_URL}/dashboard?payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${process.env.NEXTAUTH_URL}/products?payment_canceled=true`,
           customer_email: user.email,
           metadata: {

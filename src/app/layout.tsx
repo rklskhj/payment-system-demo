@@ -18,9 +18,11 @@ export default function RootLayout({
     <html lang="ko">
       <body>
         <Providers>
-          <Header />
-          {children}
-          <Footer />
+          <div className="flex flex-col min-h-screen">
+            <Header />
+            <main className="flex-grow">{children}</main>
+            <Footer />
+          </div>
           <ToastContainer />
         </Providers>
       </body>

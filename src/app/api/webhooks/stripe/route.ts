@@ -44,25 +44,7 @@ export async function POST(request: NextRequest) {
       | "subscription";
 
     if (userId && productId && amount > 0) {
-      // 결제 성공 시 주문 생성
-      const status =
-        orderType === "one-time" ? "completed" : "completed_subscription";
-
-      const orderData = {
-        userId,
-        productId,
-        amount,
-        status,
-        paymentId: session.id,
-        orderType,
-      };
-
-      await prisma.order.create({
-        data: orderData,
-      });
-
-      console.log(`주문 생성 완료: ${session.id}, 타입: ${orderType}`);
-
+      console.log("결제 완료 이벤트 처리123123");
       // 구독인 경우 구독 정보도 생성/업데이트
       if (orderType === "subscription") {
         const planType = session.metadata?.planType || "monthly";

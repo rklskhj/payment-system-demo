@@ -12,13 +12,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const router = useRouter();
 
   const { session } = useAuth();
 
   useEffect(() => {
     let isMounted = true;
-    if (session && isMounted) {
+    if (session && isMounted && !isLoggingIn) {
       toast.info("이미 로그인 상태입니다.", {
         toastId: "already-logged-in",
         position: "top-center",
@@ -33,11 +34,12 @@ export default function LoginPage() {
     return () => {
       isMounted = false;
     };
-  }, [session, router]);
+  }, [session, router, isLoggingIn]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setIsLoggingIn(true);
     setError("");
 
     try {
@@ -50,6 +52,7 @@ export default function LoginPage() {
       if (result?.error) {
         setError("로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.");
         setLoading(false);
+        setIsLoggingIn(false);
         return;
       }
 
@@ -60,6 +63,7 @@ export default function LoginPage() {
       console.error("로그인 오류:", error);
       setError("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
       setLoading(false);
+      setIsLoggingIn(false);
     }
   };
 
