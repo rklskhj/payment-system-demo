@@ -50,6 +50,7 @@ async function main() {
       description: "월간 기본 구독 서비스",
       price: 9900,
       imageUrl: "/images/basic-subscription.png",
+      productType: "subscription",
     },
   });
 
@@ -59,6 +60,7 @@ async function main() {
       description: "월간 프리미엄 구독 서비스, 모든 기능 포함",
       price: 19900,
       imageUrl: "/images/premium-subscription.png",
+      productType: "subscription",
     },
   });
 
@@ -68,12 +70,23 @@ async function main() {
       description: "특별 콘텐츠 패키지",
       price: 29900,
       imageUrl: "/images/one-time-package.png",
+      productType: "one-time",
+    },
+  });
+
+  const product4 = await prisma.product.create({
+    data: {
+      name: "기본 연간 구독",
+      description: "연간 기본 구독 서비스",
+      price: 99000,
+      imageUrl: "/images/basic-subscription.png",
+      productType: "subscription",
     },
   });
 
   console.log("Database seeding completed.");
   console.log({ user1, user2, admin });
-  console.log({ product1, product2, product3 });
+  console.log({ product1, product2, product3, product4 });
 }
 
 main()
