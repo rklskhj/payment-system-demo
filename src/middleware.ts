@@ -4,7 +4,7 @@ import { getToken } from "next-auth/jwt";
 
 export async function middleware(request: NextRequest) {
   // 보호된 경로 설정
-  const protectedPaths = ["/dashboard", "/checkout", "/subscriptions"];
+  const protectedPaths = ["/dashboard", "/checkout"];
 
   // 현재 경로 확인
   const path = request.nextUrl.pathname;
@@ -23,7 +23,7 @@ export async function middleware(request: NextRequest) {
 
     // 인증되지 않은 사용자는 로그인 페이지로 리다이렉트
     if (!token) {
-      const url = new URL("/auth/login", request.url);
+      const url = new URL("/login", request.url);
       url.searchParams.set("callbackUrl", path);
       return NextResponse.redirect(url);
     }

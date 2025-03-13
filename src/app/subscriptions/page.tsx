@@ -3,8 +3,6 @@
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import SubscriptionCard from "@/components/SubscriptionCard";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { useOrderStore } from "@/store/useOrderStore";
@@ -111,13 +109,11 @@ function SubscriptionsLoading() {
 export default function SubscriptionsPage() {
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <Header />
       <div className="container mx-auto px-4 py-8">
         <Suspense fallback={<SubscriptionsLoading />}>
           <SubscriptionContent />
         </Suspense>
       </div>
-      <Footer />
     </div>
   );
 }

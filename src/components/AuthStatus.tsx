@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { signOut } from "next-auth/react";
-
+import { usePathname } from "next/navigation";
 export default function AuthStatus() {
   const { isAuthenticated } = useAuth();
-
+  const pathname = usePathname();
   if (isAuthenticated) {
     return (
       <div className="flex space-x-4">
@@ -27,13 +27,19 @@ export default function AuthStatus() {
   }
 
   return (
-    <div className="flex space-x-4">
-      <Link href="/login" className="text-indigo-600 hover:text-indigo-800">
-        로그인
-      </Link>
-      <Link href="/register" className="text-gray-600 hover:text-gray-800">
-        회원가입
-      </Link>
-    </div>
+    <>
+      {!pathname.includes("/login") ? (
+        <div className="flex space-x-4">
+          <Link href="/login" className="text-indigo-600 hover:text-indigo-800">
+            로그인
+          </Link>
+          <Link href="/register" className="text-gray-600 hover:text-gray-800">
+            회원가입
+          </Link>
+        </div>
+      ) : (
+        <></>
+      )}
+    </>
   );
 }

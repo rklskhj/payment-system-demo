@@ -3,11 +3,10 @@
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { useOrderStore } from "@/store/useOrderStore";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Product {
   id: string;
@@ -27,6 +26,7 @@ function ProductContent() {
   const searchParams = useSearchParams();
   const paymentCanceled = searchParams.get("payment_canceled");
   const { clearTempOrder } = useOrderStore();
+  const { isAuthenticated } = useAuth();
 
   // 상품 데이터 가져오기
   const fetchProducts = async () => {
@@ -67,10 +67,10 @@ function ProductContent() {
 
       <div className="flex justify-between items-center mb-6">
         <Link
-          href="/dashboard"
+          href={isAuthenticated ? "/dashboard" : "/"}
           className="text-indigo-600 hover:text-indigo-800"
         >
-          ← 대시보드로 돌아가기
+          {isAuthenticated ? "← 대시보드로 돌아가기" : "← 홈으로 돌아가기"}
         </Link>
         <Link
           href="/subscriptions"
@@ -111,13 +111,11 @@ function ProductsLoading() {
 export default function ProductsPage() {
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <Header />
       <div className="container mx-auto px-4 py-8">
         <Suspense fallback={<ProductsLoading />}>
           <ProductContent />
         </Suspense>
       </div>
-      <Footer />
     </div>
   );
 }

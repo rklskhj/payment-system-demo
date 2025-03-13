@@ -1,12 +1,8 @@
 import Link from "next/link";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <Header />
-
       {/* 메인 콘텐츠 */}
       <main className="flex-grow">
         {/* 히어로 섹션 */}
@@ -81,9 +77,6 @@ export default function Home() {
           </div>
         </section>
       </main>
-
-      {/* 푸터 */}
-      <Footer />
     </div>
   );
 }
