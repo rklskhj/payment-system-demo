@@ -22,14 +22,35 @@ const getExpirationTime = () => {
 };
 
 const getBaseUrl = () => {
-  // dev
-  // return process.env.NEXTAUTH_URL;
-  // deploy
-  return process.env.VERCEL_URL;
+  // 사용자가 정의한 URL이 있다면 우선 사용
+  if (process.env.NEXTAUTH_URL) {
+    // 만약 NEXTAUTH_URL이 로컬호스트를 가리키고 있는데 배포 환경이라면
+    if (
+      process.env.NEXTAUTH_URL.includes("localhost") &&
+      process.env.VERCEL_URL
+    ) {
+      return `https://${process.env.VERCEL_URL}`;
+    }
+    return process.env.NEXTAUTH_URL;
+  }
+
+  // 개발환경인지 배포환경인지 확인
+  if (process.env.NODE_ENV === "development") {
+    return "http://localhost:3000";
+  }
+
+  // 배포 환경에서는 VERCEL_URL 사용
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  // 기본값 반환
+  return "http://localhost:3000";
 };
 
 export async function POST(request: Request) {
   try {
+    console.log("Payment API 호출됨");
     const session = await getServerSession();
 
     if (!session || !session.user) {
@@ -40,6 +61,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
+    console.log("요청 body:", JSON.stringify(body));
 
     // 입력 유효성 검사
     const validation = paymentSchema.safeParse(body);
@@ -79,6 +101,8 @@ export async function POST(request: Request) {
 
     try {
       let stripeSession = null;
+      console.log("결제 처리 시작, 타입:", isSubscription ? "구독" : "일회성");
+      console.log("baseUrl:", getBaseUrl());
 
       if (isSubscription) {
         // 구독 결제 처리
@@ -92,9 +116,15 @@ export async function POST(request: Request) {
         const stripeProduct = await stripe.products.create({
           name: product.name,
           ...(product.description ? { description: product.description } : {}),
-          ...(product.imageUrl && getBaseUrl()
+          ...(product.imageUrl
             ? {
-                images: [`${getBaseUrl()}${product.imageUrl}`],
+                images: [
+                  product.imageUrl.startsWith("http")
+                    ? product.imageUrl
+                    : `${getBaseUrl()}${
+                        product.imageUrl.startsWith("/") ? "" : "/"
+                      }${product.imageUrl}`,
+                ],
               }
             : {}),
         });
@@ -146,9 +176,15 @@ export async function POST(request: Request) {
                   ...(product.description
                     ? { description: product.description }
                     : {}),
-                  ...(product.imageUrl && getBaseUrl()
+                  ...(product.imageUrl
                     ? {
-                        images: [`${getBaseUrl()}${product.imageUrl}`],
+                        images: [
+                          product.imageUrl.startsWith("http")
+                            ? product.imageUrl
+                            : `${getBaseUrl()}${
+                                product.imageUrl.startsWith("/") ? "" : "/"
+                              }${product.imageUrl}`,
+                        ],
                       }
                     : {}),
                 },
