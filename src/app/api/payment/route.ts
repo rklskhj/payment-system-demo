@@ -21,25 +21,18 @@ const getExpirationTime = () => {
   return expiresAt;
 };
 
-// URL 설정을 위한 함수 추가
 const getBaseUrl = () => {
-  // 환경변수 NEXTAUTH_URL이 있으면 사용
   if (process.env.NEXTAUTH_URL) {
     return process.env.NEXTAUTH_URL;
   }
 
-  // Vercel 배포 환경에서는 VERCEL_URL 환경변수를 사용
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-
-  // 개발 환경이면 localhost 사용
   if (process.env.NODE_ENV === "development") {
     return "http://localhost:3000";
+  } else {
+    return process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "https://payment-system-demo.vercel.app/";
   }
-
-  // 기본값
-  return "https://your-production-domain.com"; // 실제 도메인으로 변경하세요
 };
 
 export async function POST(request: Request) {
