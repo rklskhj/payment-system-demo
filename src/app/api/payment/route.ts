@@ -22,24 +22,17 @@ const getExpirationTime = () => {
 };
 
 const getBaseUrl = () => {
-  // 사용자가 정의한 URL이 있다면 우선 사용
-  if (process.env.NEXTAUTH_URL) {
-    // 만약 NEXTAUTH_URL이 로컬호스트를 가리키고 있는데 배포 환경이라면
-    if (
-      process.env.NEXTAUTH_URL.includes("localhost") &&
-      process.env.VERCEL_URL
-    ) {
-      return `https://${process.env.VERCEL_URL}`;
-    }
-    return process.env.NEXTAUTH_URL;
-  }
-
-  // 개발환경인지 배포환경인지 확인
+  // 개발 환경인 경우 localhost 사용
   if (process.env.NODE_ENV === "development") {
     return "http://localhost:3000";
   }
 
-  // 배포 환경에서는 VERCEL_URL 사용
+  // 배포 환경인 경우 NEXTAUTH_URL 또는 VERCEL_URL 사용
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL;
+  }
+
+  // VERCEL_URL이 있으면 사용
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
