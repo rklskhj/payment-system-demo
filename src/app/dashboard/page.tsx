@@ -12,6 +12,7 @@ import {
   useCreateOrder,
   Order as BaseOrder,
 } from "@/hooks/queries/useOrderQueries";
+import { usePaymentProcessing } from "@/hooks/usePaymentProcessing";
 
 interface Product {
   id: string;
@@ -51,23 +52,35 @@ function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // 쿼리 파라미터 읽기 - useMemo로 최적화
-  const queryParams = useMemo(
-    () => ({
-      paymentSuccess: searchParams.get("payment_success"),
-      subscriptionSuccess: searchParams.get("subscription_success"),
-      sessionId: searchParams.get("session_id"),
-    }),
-    [searchParams]
-  );
-
   const { clearTempOrder } = useOrderStore();
   const { refetch: refetchOrders } = useGetOrders();
   const [cancellingSubscription, setCancellingSubscription] = useState<
     string | null
   >(null);
   const { mutate: cancelOrder } = useCancelOrder();
-  const { mutate: createOrder } = useCreateOrder();
+  const { mutate: createOrderMutation } = useCreateOrder();
+
+  // createOrder 함수를 유형 호환성을 위해 래핑
+  const createOrder = useCallback(
+    (order: {
+      id: string;
+      userId: string;
+      productId: string;
+      amount: number;
+      orderType: string;
+      status: string;
+      paymentId: string;
+      createdAt: string;
+      updatedAt: string;
+    }) => {
+      // 주문 타입을 변환하여 mutate 함수에 전달
+      createOrderMutation({
+        ...order,
+        orderType: order.orderType as "one-time" | "subscription",
+      });
+    },
+    [createOrderMutation]
+  );
 
   // 사용자 정보 가져오기
   const fetchUserDataCallback = useCallback(async () => {
@@ -86,42 +99,146 @@ function DashboardContent() {
     }
   }, []);
 
+  // 결제 처리 커스텀 훅 사용
+  const { handlePaymentSuccess } = usePaymentProcessing({
+    session,
+    createOrder,
+    clearTempOrder,
+    refetchOrders,
+    fetchUserData: fetchUserDataCallback,
+  });
+
   // 구독 취소 핸들러
   const handleCancelSubscription = useCallback(
     async (order: OrderWithProduct) => {
+      // 이미 취소 중인 경우 중복 실행 방지
+      if (cancellingSubscription) {
+        return;
+      }
+
       if (!confirm("정말로 구독을 취소하시겠습니까?")) {
         return;
       }
 
+      // 취소 버튼 비활성화를 위해 상태 설정
       setCancellingSubscription(order.id);
+
+      const toastId = toast.loading("구독 취소 중...", {
+        position: "top-center",
+      });
+
       try {
+        console.log(
+          `구독 취소 요청: 주문 ID=${order.id}, 결제 ID=${order.paymentId}`
+        );
+
+        // API 호출
+        console.log(
+          `API 호출: /api/orders/cancel?paymentId=${order.paymentId}`
+        );
+        const response = await fetch(
+          `/api/orders/cancel?paymentId=${order.paymentId}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        // 응답 상태 로깅
+        console.log(`API 응답 상태: ${response.status} ${response.statusText}`);
+
+        // 응답 본문 로깅
+        const data = await response.json();
+        console.log("API 응답 데이터:", data);
+
+        if (!response.ok) {
+          // 404 에러인 경우 (주문을 찾을 수 없음)
+          if (response.status === 404) {
+            const stripeUrl = `https://dashboard.stripe.com/test/subscriptions/${order.paymentId}`;
+
+            const errorMessage = `데이터베이스에서 주문을 찾을 수 없습니다. Stripe 대시보드에서 직접 취소해 보세요: 
+              <a href="${stripeUrl}" target="_blank" rel="noopener noreferrer" style="color: blue; text-decoration: underline;">
+                Stripe 대시보드에서 취소
+              </a>`;
+
+            toast.update(toastId, {
+              render: () => (
+                <div dangerouslySetInnerHTML={{ __html: errorMessage }} />
+              ),
+              type: "warning",
+              isLoading: false,
+              autoClose: 10000,
+              closeOnClick: false,
+            });
+
+            // 주문 상태를 취소로 변경 시도
+            try {
+              console.log("주문을 직접 취소 상태로 업데이트 시도");
+              cancelOrder(order, {
+                onSuccess: () => {
+                  console.log("주문 상태 업데이트 성공");
+                  fetchUserDataCallback();
+                },
+                onError: (updateErr) => {
+                  console.error("주문 상태 업데이트 실패:", updateErr);
+                },
+              });
+            } catch (updateErr) {
+              console.error("주문 상태 업데이트 시도 중 오류:", updateErr);
+            }
+
+            // 취소 상태 해제
+            setCancellingSubscription(null);
+            return;
+          }
+
+          throw new Error(data.message || "구독 취소 중 오류가 발생했습니다.");
+        }
+
+        // 응답이 성공한 경우
+        console.log("구독 취소 성공:", data);
+        toast.update(toastId, {
+          render:
+            typeof data === "object" && data && "message" in data
+              ? (data.message as string)
+              : "구독이 성공적으로 취소되었습니다.",
+          type: "success",
+          isLoading: false,
+          autoClose: 2000,
+        });
+
+        // 주문 상태 업데이트
         cancelOrder(order, {
           onSuccess: () => {
-            toast.success("구독이 성공적으로 취소되었습니다.", {
-              position: "top-center",
-              autoClose: 2000,
-            });
+            console.log("주문 상태 업데이트 성공");
             fetchUserDataCallback();
           },
-          onError: () => {
-            toast.error("구독 취소 중 오류가 발생했습니다.", {
-              position: "top-center",
-              autoClose: 2000,
-              closeOnClick: true,
-              pauseOnHover: false,
-              draggable: true,
-            });
+          onError: (updateErr) => {
+            console.error("주문 상태 업데이트 실패:", updateErr);
           },
           onSettled: () => {
+            // 취소 상태 해제 - onSettled에서만 상태 해제
             setCancellingSubscription(null);
           },
         });
       } catch (error) {
         console.error("구독 취소 오류:", error);
+        toast.update(toastId, {
+          render:
+            error instanceof Error
+              ? error.message
+              : "구독 취소 중 예기치 않은 오류가 발생했습니다.",
+          type: "error",
+          isLoading: false,
+          autoClose: 3000,
+        });
+        // 오류 발생 시 취소 상태 해제
         setCancellingSubscription(null);
       }
     },
-    [cancelOrder, fetchUserDataCallback]
+    [cancelOrder, fetchUserDataCallback, cancellingSubscription]
   );
 
   // 주문 목록 메모이제이션 - 항상 호출되도록 if 문 앞으로 이동
@@ -224,128 +341,15 @@ function DashboardContent() {
     fetchUserDataCallback();
   }, [session, status, router, fetchUserDataCallback]);
 
-  // 결제 성공 처리를 위한 별도의 useEffect
+  // URL 파라미터로 결제 성공 처리
   useEffect(() => {
-    // 이미 처리된 세션인지 확인하기 위한 로컬 스토리지 키 생성 함수
-    const getProcessedSessionKey = (sessionId: string) =>
-      `payment_processed_${sessionId}`;
-
-    const processPayment = async () => {
-      console.log("결제 상태 확인:", {
-        paymentSuccess: queryParams.paymentSuccess,
-        subscriptionSuccess: queryParams.subscriptionSuccess,
-        sessionId: queryParams.sessionId,
-        tempOrder: useOrderStore.getState().tempOrder,
-      });
-
-      if (
-        queryParams.paymentSuccess !== "true" &&
-        queryParams.subscriptionSuccess !== "true"
-      ) {
-        console.log("결제 성공 파라미터가 없어 처리 중단");
-        return;
-      }
-
-      const sessionId = queryParams.sessionId;
-      if (!sessionId) {
-        console.error("세션 ID가 없어 처리 중단");
-        return;
-      }
-
-      // 이미 처리된 세션인지 확인
-      const processedKey = getProcessedSessionKey(sessionId);
-      if (localStorage.getItem(processedKey)) {
-        console.log("이미 처리된 세션입니다:", sessionId);
-
-        // URL에서 쿼리 파라미터 제거
-        const url = new URL(window.location.href);
-        url.search = "";
-        window.history.replaceState({}, "", url.toString());
-
-        return;
-      }
-
-      try {
-        console.log("결제 성공 처리 시작...");
-
-        // tempOrder 상태 가져오기
-        const orderDetails = useOrderStore.getState().tempOrder;
-        console.log("주문 상세 정보:", orderDetails);
-
-        if (!orderDetails) {
-          console.error("주문 정보가 없습니다");
-          toast.error("주문 정보를 찾을 수 없습니다. 관리자에게 문의하세요.");
-          return;
-        }
-
-        // 주문 생성 API 호출 - 클라이언트가 주문 생성의 주체
-        console.log("주문 생성 중...");
-        try {
-          // 주문 생성 요청
-          createOrder({
-            id: "", // 서버에서 생성됨
-            userId: session?.user?.id || "",
-            productId: orderDetails.productId,
-            amount: orderDetails.amount,
-            orderType: orderDetails.productType,
-            status:
-              orderDetails.productType === "one-time"
-                ? "completed"
-                : "completed_subscription",
-            paymentId: sessionId,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          });
-          console.log("주문 생성 요청 완료");
-
-          // 세션 처리 완료 표시 - 중복 처리 방지
-          localStorage.setItem(processedKey, "true");
-
-          // 임시 주문 정보 삭제
-          clearTempOrder();
-
-          // 주문 목록 갱신
-          await refetchOrders();
-
-          // 사용자 정보 다시 가져오기
-          await fetchUserDataCallback();
-
-          // 성공 메시지 표시
-          const successMessage =
-            queryParams.paymentSuccess === "true"
-              ? "결제가 성공적으로 완료되었습니다."
-              : "구독이 성공적으로 시작되었습니다.";
-
-          toast.success(successMessage, {
-            position: "top-center",
-            autoClose: 3000,
-          });
-        } catch (error) {
-          console.error("주문 생성 실패:", error);
-          toast.error(
-            "주문 처리 중 오류가 발생했습니다. 관리자에게 문의하세요."
-          );
-        }
-
-        // URL에서 쿼리 파라미터 제거
-        const url = new URL(window.location.href);
-        url.search = "";
-        window.history.replaceState({}, "", url.toString());
-      } catch (error) {
-        console.error("결제 처리 오류:", error);
-        toast.error("결제 처리 중 오류가 발생했습니다.");
-      }
-    };
-
-    processPayment();
-  }, [
-    clearTempOrder,
-    refetchOrders,
-    fetchUserDataCallback,
-    queryParams,
-    createOrder,
-    session,
-  ]);
+    if (
+      searchParams.has("payment_success") ||
+      searchParams.has("subscription_success")
+    ) {
+      handlePaymentSuccess(searchParams);
+    }
+  }, [searchParams, handlePaymentSuccess]);
 
   if (loading) {
     return (

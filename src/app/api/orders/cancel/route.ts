@@ -37,93 +37,101 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 해당 사용자의 주문 찾기
-    const order = await prisma.order.findFirst({
-      where: {
-        paymentId,
-        userId: user.id,
-        OR: [
-          { status: "pending" },
-          { status: "pending_subscription" },
-          { status: "completed_subscription" },
-        ],
-      },
-    });
-
-    if (!order) {
+    // 1. 구독 ID 확인 및 유효성 검사
+    if (!paymentId.startsWith("sub_")) {
       return NextResponse.json(
-        { message: "취소할 주문을 찾을 수 없습니다." },
+        { message: "유효한 구독 ID가 아닙니다." },
+        { status: 400 }
+      );
+    }
+
+    // 2. Stripe에서 구독 상태 확인
+    let subscription;
+    try {
+      subscription = await stripe.subscriptions.retrieve(paymentId);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      // 구독 조회 실패
+      return NextResponse.json(
+        { message: "구독 정보를 찾을 수 없습니다." },
         { status: 404 }
       );
     }
 
-    // 주문 상태 업데이트
-    await prisma.order.update({
-      where: { id: order.id },
-      data: { status: "canceled" },
-    });
+    // 3. 이미 취소된 구독인지 확인
+    if (subscription.status === "canceled") {
+      // 주문이 있다면 상태 업데이트 (DB 일관성 유지)
+      const order = await prisma.order.findFirst({
+        where: {
+          paymentId,
+          userId: user.id,
+        },
+      });
 
-    // 구독인 경우 Stripe 구독 취소 처리
-    if (
-      order.orderType === "subscription" &&
-      order.status === "completed_subscription"
-    ) {
-      try {
-        // 해당 주문과 연결된 구독 정보 조회
-        const subscriptions = await stripe.subscriptions.list({
-          limit: 10,
+      if (order && order.status !== "canceled") {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { status: "canceled" },
         });
-
-        // 취소할 구독 찾기 (메타데이터에 userId, productId가 일치하는 구독)
-        let subscriptionToCancel = null;
-        for (const sub of subscriptions.data) {
-          if (
-            sub.metadata.userId === user.id &&
-            sub.metadata.productId === order.productId
-          ) {
-            subscriptionToCancel = sub;
-            break;
-          }
-        }
-
-        if (subscriptionToCancel) {
-          // Stripe 구독 취소
-          await stripe.subscriptions.cancel(subscriptionToCancel.id);
-          console.log(`Stripe 구독 취소 완료: ${subscriptionToCancel.id}`);
-
-          // 구독 정보 업데이트
-          await prisma.subscription.updateMany({
-            where: {
-              userId: user.id,
-              stripeId: subscriptionToCancel.id,
-            },
-            data: { status: "canceled" },
-          });
-        } else {
-          console.log("취소할 Stripe 구독을 찾을 수 없습니다");
-        }
-      } catch (stripeError) {
-        console.error("Stripe 구독 취소 오류:", stripeError);
-        // Stripe 오류는 무시하고 계속 진행
       }
-    } else {
-      // 일반 주문인 경우 Stripe 세션 취소 시도
-      try {
-        await stripe.checkout.sessions.expire(paymentId);
-      } catch (stripeError) {
-        console.error("Stripe 세션 취소 오류:", stripeError);
-        // Stripe 오류는 무시하고 계속 진행
-      }
+
+      return NextResponse.json({
+        message: "구독이 이미 취소되었습니다.",
+      });
     }
 
-    return NextResponse.json({ message: "주문이 취소되었습니다." });
+    // 4. 구독이 활성 상태가 아니면 오류 반환
+    if (subscription.status !== "active") {
+      return NextResponse.json(
+        {
+          message: `구독이 취소할 수 있는 상태가 아닙니다. (현재 상태: ${subscription.status})`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // 5. 주문 상태 업데이트
+    const order = await prisma.order.findFirst({
+      where: {
+        paymentId,
+        userId: user.id,
+      },
+    });
+
+    if (order) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { status: "canceled" },
+      });
+    }
+
+    // 6. 구독 취소 실행
+    try {
+      const canceledSubscription = await stripe.subscriptions.cancel(paymentId);
+
+      return NextResponse.json({
+        message: "구독이 성공적으로 취소되었습니다.",
+        status: canceledSubscription.status,
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "알 수 없는 오류";
+
+      return NextResponse.json(
+        {
+          message: "구독 취소 처리 중 오류가 발생했습니다.",
+          error: errorMessage,
+        },
+        { status: 500 }
+      );
+    }
   } catch (error) {
-    console.error("주문 취소 오류:", error);
     const errorMessage = error instanceof Error ? error.message : String(error);
+
     return NextResponse.json(
       {
         message: "서버 오류가 발생했습니다.",
-        details:
+        error:
           process.env.NODE_ENV === "development" ? errorMessage : undefined,
       },
       { status: 500 }
