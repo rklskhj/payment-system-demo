@@ -1,7 +1,11 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { SessionProvider } from "next-auth/react";
 
-export default function DebugPage() {
+// 세션 데이터를 사용하는 클라이언트 컴포넌트
+function DebugContent() {
   const { data: session, status } = useSession();
   const [envVars, setEnvVars] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -74,5 +78,14 @@ export default function DebugPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// 세션 공급자로 감싸는 컴포넌트
+export default function DebugPage() {
+  return (
+    <SessionProvider>
+      <DebugContent />
+    </SessionProvider>
   );
 }

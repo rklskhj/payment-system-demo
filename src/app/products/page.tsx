@@ -24,7 +24,7 @@ function ProductContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
-  const paymentCanceled = searchParams.get("payment_canceled");
+  const paymentCanceled = searchParams?.get("payment_canceled");
   const { clearTempOrder } = useOrderStore();
   const { isAuthenticated } = useAuth();
 

@@ -74,3 +74,6 @@ export async function GET(request: NextRequest) {
     await prisma.$disconnect();
   }
 }
+
+// 이 라우트가 동적임을 Next.js에 알립니다
+export const dynamic = "force-dynamic";

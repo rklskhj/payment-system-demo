@@ -28,7 +28,7 @@ export default function AuthStatus() {
 
   return (
     <>
-      {!pathname.includes("/login") ? (
+      {!pathname?.includes("/login") ? (
         <div className="flex space-x-4">
           <Link href="/login" className="text-indigo-600 hover:text-indigo-800">
             로그인

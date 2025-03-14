@@ -23,7 +23,7 @@ function SubscriptionContent() {
   const [subscriptions, setSubscriptions] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
-  const subscriptionCanceled = searchParams.get("subscription_canceled");
+  const subscriptionCanceled = searchParams?.get("subscription_canceled");
   const { clearTempOrder } = useOrderStore();
 
   // 구독 상품 데이터 가져오기

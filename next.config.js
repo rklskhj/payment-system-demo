@@ -1,13 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
-  experimental: {
-    outputFileTracingExcludes: {
-      "*": ["**/*.js.map", "**/*.d.ts", ".next/trace"],
-    },
-  },
+  output: "standalone",
   images: {
-    domains: ["example.com"],
+    domains: ["localhost"],
+  },
+  // API 라우트를 동적으로 처리하도록 설정
+  experimental: {
+    serverComponentsExternalPackages: ["@prisma/client"],
   },
 };
 

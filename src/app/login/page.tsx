@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "react-toastify";
 
-export default function LoginPage() {
+// SearchParams를 사용하는 컴포넌트
+function LoginForm({ defaultCallbackUrl = "/dashboard" }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -15,14 +16,23 @@ export default function LoginPage() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  // 쿼리 파라미터에서 callbackUrl 가져오기, 기본값은 대시보드
-  const callbackUrl = searchParams?.get("callbackUrl") || "/dashboard";
-
+  const callbackUrl = searchParams?.get("callbackUrl") || defaultCallbackUrl;
   const { session } = useAuth();
 
   useEffect(() => {
     let isMounted = true;
     if (session && isMounted && !isLoggingIn) {
+      // 로그인 중이 아니고 이미 세션이 있는 경우
+      // 콜백 URL이 있는 경우 해당 URL로 리디렉션
+      const redirectUrl = searchParams?.get("callbackUrl") || "/dashboard";
+
+      // 로그인 페이지로 다시 리디렉션되는 경우를 방지
+      if (redirectUrl.includes("/login")) {
+        router.push("/dashboard");
+      } else {
+        router.push(redirectUrl);
+      }
+
       toast.info("이미 로그인 상태입니다.", {
         toastId: "already-logged-in",
         position: "top-center",
@@ -32,12 +42,11 @@ export default function LoginPage() {
         pauseOnHover: false,
         draggable: true,
       });
-      router.push("/");
     }
     return () => {
       isMounted = false;
     };
-  }, [session, router, isLoggingIn]);
+  }, [session, router, isLoggingIn, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,5 +185,16 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+// Suspense로 감싸진 메인 컴포넌트
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={<div className="flex justify-center p-6">로딩 중...</div>}
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

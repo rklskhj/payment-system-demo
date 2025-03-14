@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 
+// 이 라우트가 동적임을 Next.js에 알립니다
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const session = await getServerSession();
