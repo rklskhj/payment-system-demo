@@ -344,8 +344,8 @@ function DashboardContent() {
   // URL 파라미터로 결제 성공 처리
   useEffect(() => {
     if (
-      searchParams.has("payment_success") ||
-      searchParams.has("subscription_success")
+      searchParams?.has("payment_success") ||
+      searchParams?.has("subscription_success")
     ) {
       handlePaymentSuccess(searchParams);
     }
