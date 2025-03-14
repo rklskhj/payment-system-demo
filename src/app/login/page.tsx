@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "react-toastify";
@@ -14,6 +14,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // 쿼리 파라미터에서 callbackUrl 가져오기, 기본값은 대시보드
+  const callbackUrl = searchParams?.get("callbackUrl") || "/dashboard";
 
   const { session } = useAuth();
 
@@ -43,11 +46,18 @@ export default function LoginPage() {
     setError("");
 
     try {
+      // 로그인 시도하기 전에 콜백 URL 로깅
+      console.log("로그인 시도, 콜백 URL:", callbackUrl);
+
+      // redirect: false로 설정하여 NextAuth가 자동 리디렉션하지 않도록 함
       const result = await signIn("credentials", {
         redirect: false,
         email,
         password,
+        callbackUrl,
       });
+
+      console.log("로그인 결과:", result);
 
       if (result?.error) {
         setError("로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.");
@@ -56,9 +66,26 @@ export default function LoginPage() {
         return;
       }
 
-      // 로그인 성공
-      router.push("/dashboard");
-      router.refresh();
+      // 로그인 성공 - 약간의 지연 후 리디렉션
+      console.log("로그인 성공, 리디렉션 URL:", callbackUrl);
+
+      // URL이 /login을 포함하면 대시보드로 리디렉션
+      const redirectTo = callbackUrl.includes("/login")
+        ? "/dashboard"
+        : callbackUrl;
+      console.log("최종 리디렉션 URL:", redirectTo);
+
+      // 페이지 이동 전에 토스트 메시지 표시
+      toast.success("로그인 성공! 이동 중...", {
+        autoClose: 1500,
+        position: "top-center",
+      });
+
+      // 약간의 지연 후 리디렉션
+      setTimeout(() => {
+        router.push(redirectTo);
+        router.refresh();
+      }, 500);
     } catch (error) {
       console.error("로그인 오류:", error);
       setError("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
