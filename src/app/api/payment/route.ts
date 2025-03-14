@@ -22,17 +22,10 @@ const getExpirationTime = () => {
 };
 
 const getBaseUrl = () => {
-  if (process.env.NEXTAUTH_URL) {
-    return process.env.NEXTAUTH_URL;
-  }
-
-  if (process.env.NODE_ENV === "development") {
-    return "http://localhost:3000";
-  } else {
-    return process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "https://payment-system-demo.vercel.app/";
-  }
+  // dev
+  // return process.env.NEXTAUTH_URL;
+  // deploy
+  return process.env.VERCEL_URL;
 };
 
 export async function POST(request: Request) {
