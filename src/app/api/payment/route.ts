@@ -21,6 +21,27 @@ const getExpirationTime = () => {
   return expiresAt;
 };
 
+// URL 설정을 위한 함수 추가
+const getBaseUrl = () => {
+  // 환경변수 NEXTAUTH_URL이 있으면 사용
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL;
+  }
+
+  // Vercel 배포 환경에서는 VERCEL_URL 환경변수를 사용
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  // 개발 환경이면 localhost 사용
+  if (process.env.NODE_ENV === "development") {
+    return "http://localhost:3000";
+  }
+
+  // 기본값
+  return "https://your-production-domain.com"; // 실제 도메인으로 변경하세요
+};
+
 export async function POST(request: Request) {
   try {
     const session = await getServerSession();
@@ -85,9 +106,9 @@ export async function POST(request: Request) {
         const stripeProduct = await stripe.products.create({
           name: product.name,
           ...(product.description ? { description: product.description } : {}),
-          ...(product.imageUrl && process.env.NEXTAUTH_URL
+          ...(product.imageUrl && getBaseUrl()
             ? {
-                images: [`${process.env.NEXTAUTH_URL}${product.imageUrl}`],
+                images: [`${getBaseUrl()}${product.imageUrl}`],
               }
             : {}),
         });
@@ -113,8 +134,8 @@ export async function POST(request: Request) {
             },
           ],
           mode: "subscription",
-          success_url: `${process.env.NEXTAUTH_URL}/dashboard?subscription_success=true&session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${process.env.NEXTAUTH_URL}/subscriptions?subscription_canceled=true`,
+          success_url: `${getBaseUrl()}/dashboard?subscription_success=true&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${getBaseUrl()}/subscriptions?subscription_canceled=true`,
           customer_email: user.email,
           metadata: {
             userId: user.id,
@@ -139,11 +160,9 @@ export async function POST(request: Request) {
                   ...(product.description
                     ? { description: product.description }
                     : {}),
-                  ...(product.imageUrl && process.env.NEXTAUTH_URL
+                  ...(product.imageUrl && getBaseUrl()
                     ? {
-                        images: [
-                          `${process.env.NEXTAUTH_URL}${product.imageUrl}`,
-                        ],
+                        images: [`${getBaseUrl()}${product.imageUrl}`],
                       }
                     : {}),
                 },
@@ -153,8 +172,8 @@ export async function POST(request: Request) {
             },
           ],
           mode: "payment",
-          success_url: `${process.env.NEXTAUTH_URL}/dashboard?payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${process.env.NEXTAUTH_URL}/products?payment_canceled=true`,
+          success_url: `${getBaseUrl()}/dashboard?payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${getBaseUrl()}/products?payment_canceled=true`,
           customer_email: user.email,
           metadata: {
             userId: user.id,
