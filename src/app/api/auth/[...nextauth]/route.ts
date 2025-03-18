@@ -49,34 +49,38 @@ const handler = NextAuth({
   },
   callbacks: {
     async jwt({ token, user }) {
+      console.log("JWT 콜백:", { token, user });
       if (user) {
         token.id = user.id;
       }
       return token;
     },
     async session({ session, token }) {
+      console.log("세션 콜백:", { session, token });
       if (session.user) {
         session.user.id = token.id as string;
       }
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // Vercel 환경에서의 baseUrl 설정
-      const deployedUrl = process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : process.env.NEXTAUTH_URL;
+      // 현재 요청의 실제 origin 사용
+      const currentOrigin = baseUrl;
 
-      const effectiveBaseUrl =
-        process.env.NODE_ENV === "production" ? deployedUrl : baseUrl;
+      console.log("리디렉션 처리:", {
+        url,
+        currentOrigin,
+        NODE_ENV: process.env.NODE_ENV,
+      });
 
-      console.log("사용되는 baseUrl:", effectiveBaseUrl);
-
+      // 절대 URL인 경우 현재 origin으로 변환
       if (url.startsWith("http")) {
-        return url;
+        const urlObj = new URL(url);
+        // origin만 현재 환경에 맞게 변경
+        return `${currentOrigin}${urlObj.pathname}${urlObj.search}`;
       }
 
-      // 상대 경로를 절대 경로로 변환
-      return `${effectiveBaseUrl}${url.startsWith("/") ? url : `/${url}`}`;
+      // 상대 URL인 경우
+      return `${currentOrigin}${url.startsWith("/") ? url : `/${url}`}`;
     },
   },
   pages: {
@@ -86,6 +90,19 @@ const handler = NextAuth({
   },
   debug: process.env.NODE_ENV === "development",
   secret: process.env.NEXTAUTH_SECRET,
+  cookies: {
+    sessionToken: {
+      name: `${
+        process.env.NODE_ENV === "production" ? "__Secure-" : ""
+      }next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
 });
 
 export { handler as GET, handler as POST };

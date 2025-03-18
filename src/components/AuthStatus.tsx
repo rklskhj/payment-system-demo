@@ -17,7 +17,12 @@ export default function AuthStatus() {
           마이페이지
         </Link>
         <button
-          onClick={() => signOut({ callbackUrl: "/" })}
+          onClick={() =>
+            signOut({
+              callbackUrl: "/",
+              redirect: true,
+            })
+          }
           className="text-gray-600 hover:text-gray-800"
         >
           로그아웃
