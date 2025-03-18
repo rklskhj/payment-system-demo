@@ -15,17 +15,24 @@ export async function middleware(request: NextRequest) {
   );
 
   if (isProtectedPath) {
-    // JWT 토큰 확인
+    // JWT 토큰 확인 (추가 옵션으로 보안 강화)
     const token = await getToken({
       req: request,
       secret: process.env.NEXTAUTH_SECRET,
+      secureCookie: process.env.NODE_ENV === "production",
     });
 
     // 인증되지 않은 사용자는 로그인 페이지로 리다이렉트
     if (!token) {
-      const url = new URL("/login", request.url);
-      url.searchParams.set("callbackUrl", path);
-      return NextResponse.redirect(url);
+      // 전체 URL을 구성 (hostname 포함)
+      const baseUrl = request.nextUrl.origin;
+      const loginUrl = new URL("/login", baseUrl);
+
+      // callbackUrl 설정 (절대경로로)
+      loginUrl.searchParams.set("callbackUrl", path);
+
+      console.log(`인증 실패: ${path} → ${loginUrl.toString()}`);
+      return NextResponse.redirect(loginUrl);
     }
   }
 

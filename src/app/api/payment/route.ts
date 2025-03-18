@@ -27,14 +27,14 @@ const getBaseUrl = () => {
     return "http://localhost:3000";
   }
 
-  // 배포 환경인 경우 NEXTAUTH_URL 또는 VERCEL_URL 사용
-  if (process.env.NEXTAUTH_URL) {
-    return process.env.NEXTAUTH_URL;
-  }
-
-  // VERCEL_URL이 있으면 사용
+  // Vercel 배포 환경인 경우
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
+  }
+
+  // NEXTAUTH_URL이 설정된 경우
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL;
   }
 
   // 기본값 반환
