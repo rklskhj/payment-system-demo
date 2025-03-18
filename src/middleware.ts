@@ -24,6 +24,7 @@ export async function middleware(request: NextRequest) {
 
     // 인증되지 않은 사용자는 로그인 페이지로 리다이렉트
     if (!token) {
+      console.log("인증 실패: 토큰이 없습니다.");
       // 전체 URL을 구성 (hostname 포함)
       const baseUrl = request.nextUrl.origin;
       const loginUrl = new URL("/login", baseUrl);

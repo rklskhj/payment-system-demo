@@ -89,10 +89,11 @@ function LoginForm({ defaultCallbackUrl = "/dashboard" }) {
         autoClose: 1500,
         position: "top-center",
       });
+      console.log("리디렉션 중:", redirectTo);
+      router.push(redirectTo);
 
       // 약간의 지연 후 리디렉션
       setTimeout(() => {
-        router.push(redirectTo);
         router.refresh();
       }, 500);
     } catch (error) {
