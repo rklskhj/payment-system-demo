@@ -33,7 +33,16 @@ export async function middleware(request: NextRequest) {
       const loginUrl = new URL("/login", origin);
       loginUrl.searchParams.set("callbackUrl", path);
 
-      console.log(`리디렉션 생성: ${loginUrl.toString()}`);
+      // 로그에 더 많은 정보 추가
+      console.log(`리디렉션 생성: ${loginUrl.toString()}`, {
+        origin,
+        path,
+        fullUrl: loginUrl.toString(),
+      });
+
+      // 쿠키가 제대로 전송되었는지 확인
+      console.log("쿠키 확인:", request.cookies.getAll());
+
       return NextResponse.redirect(loginUrl);
     }
   }

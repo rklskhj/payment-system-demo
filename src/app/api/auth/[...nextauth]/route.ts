@@ -63,24 +63,17 @@ const handler = NextAuth({
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // 현재 요청의 실제 origin 사용
-      const currentOrigin = baseUrl;
+      console.log("NextAuth 리디렉션 콜백:", { url, baseUrl });
 
-      console.log("리디렉션 처리:", {
-        url,
-        currentOrigin,
-        NODE_ENV: process.env.NODE_ENV,
-      });
-
-      // 절대 URL인 경우 현재 origin으로 변환
+      // 이미 절대 URL인 경우 그대로 반환
       if (url.startsWith("http")) {
-        const urlObj = new URL(url);
-        // origin만 현재 환경에 맞게 변경
-        return `${currentOrigin}${urlObj.pathname}${urlObj.search}`;
+        return url;
       }
 
-      // 상대 URL인 경우
-      return `${currentOrigin}${url.startsWith("/") ? url : `/${url}`}`;
+      // 상대 URL인 경우 baseUrl과 결합
+      const fullUrl = `${baseUrl}${url.startsWith("/") ? url : `/${url}`}`;
+      console.log("최종 변환된 URL:", fullUrl);
+      return fullUrl;
     },
   },
   pages: {

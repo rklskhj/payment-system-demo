@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "react-toastify";
@@ -14,7 +14,6 @@ function LoginForm({ defaultCallbackUrl = "/dashboard" }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams?.get("callbackUrl") || defaultCallbackUrl;
   const { session } = useAuth();
@@ -27,11 +26,17 @@ function LoginForm({ defaultCallbackUrl = "/dashboard" }) {
       const redirectUrl = searchParams?.get("callbackUrl") || "/dashboard";
 
       // 로그인 페이지로 다시 리디렉션되는 경우를 방지
-      if (redirectUrl.includes("/login")) {
-        router.push("/dashboard");
-      } else {
-        router.push(redirectUrl);
-      }
+      const finalPath = redirectUrl.includes("/login")
+        ? "/dashboard"
+        : redirectUrl;
+
+      // 절대 경로 구성
+      const origin = window.location.origin;
+      const fullRedirectUrl = `${origin}${
+        finalPath.startsWith("/") ? finalPath : `/${finalPath}`
+      }`;
+
+      console.log("이미 로그인됨, 리디렉션:", fullRedirectUrl);
 
       toast.info("이미 로그인 상태입니다.", {
         toastId: "already-logged-in",
@@ -42,11 +47,14 @@ function LoginForm({ defaultCallbackUrl = "/dashboard" }) {
         pauseOnHover: false,
         draggable: true,
       });
+
+      // window.location.href를 사용하여 안정적인 리디렉션
+      window.location.href = fullRedirectUrl;
     }
     return () => {
       isMounted = false;
     };
-  }, [session, router, isLoggingIn, searchParams]);
+  }, [session, isLoggingIn, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,27 +83,29 @@ function LoginForm({ defaultCallbackUrl = "/dashboard" }) {
         return;
       }
 
-      // 로그인 성공 - 약간의 지연 후 리디렉션
-      console.log("로그인 성공, 리디렉션 URL:", callbackUrl);
-
-      // URL이 /login을 포함하면 대시보드로 리디렉션
-      const redirectTo = callbackUrl.includes("/login")
-        ? "/dashboard"
-        : callbackUrl;
-      console.log("최종 리디렉션 URL:", redirectTo);
-
       // 페이지 이동 전에 토스트 메시지 표시
       toast.success("로그인 성공! 이동 중...", {
         autoClose: 1500,
         position: "top-center",
       });
-      console.log("리디렉션 중:", redirectTo);
-      router.push(redirectTo);
 
-      // 약간의 지연 후 리디렉션
-      setTimeout(() => {
-        router.refresh();
-      }, 500);
+      // result.url이 있으면 그대로 사용 (절대 경로)
+      if (result?.url) {
+        console.log("결과 URL로 리디렉션:", result.url);
+        window.location.href = result.url;
+        return;
+      }
+
+      // result.url이 없는 경우 수동으로 URL 구성
+      const origin = window.location.origin;
+      // URL이 /login을 포함하면 대시보드로 리디렉션
+      const path = callbackUrl.includes("/login") ? "/dashboard" : callbackUrl;
+      const fullRedirectUrl = `${origin}${
+        path.startsWith("/") ? path : `/${path}`
+      }`;
+
+      console.log("최종 리디렉션 URL (수동 구성):", fullRedirectUrl);
+      window.location.href = fullRedirectUrl;
     } catch (error) {
       console.error("로그인 오류:", error);
       setError("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
